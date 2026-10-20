@@ -189,10 +189,19 @@ class EntitiesSpawner {
 		}
 
 		console.log("Spawning enemy");
-		let type = EntitiesSpawner._entities[random(0, EntitiesSpawner._entities.length-1)];
+		let type = random(EntitiesSpawner._entities);
+
+		if (type === undefined) {
+			console.log("Type is undefined, num = ", type);
+			return;
+		}
+
+		/**
+		 * @type {CharacterItem}
+		 */
 		let entity = new type();
 		entity.position.x = random(EntitiesSpawner._spawnArea.x, EntitiesSpawner._spawnArea.y);
-		entity.position.y = random(0, CANVAS_SIZE.y);
+		entity.position.y = random(0, CANVAS_SIZE.y - 40);
 	}
 }
 
@@ -467,7 +476,6 @@ class Ghost extends Monster {
 
 	constructor() {
 		super();
-		this.collision.offset = new Vector2(0, 0);
 		this.scale = new Vector2(3, 3);
 		this.collision.size = new Vector2(Ghost._imageLoaded.width * this.scale.x, Ghost._imageLoaded.height * this.scale.y);
 	}
@@ -480,11 +488,29 @@ class Ghost extends Monster {
 	process() {
 		this.position.x -= PlaceableItem.getSpeed(75) * deltaTime;
 	}
-
-	
 }
 
-class Bullet extends CharacterItem {
+class Skeleton extends Monster {
+
+	static _imageLoaded
+
+	constructor() {
+		super();
+
+		this.scale = new Vector2(2, 2);
+		this.collision.size = new Vector2(Skeleton._imageLoaded.width * this.scale.x, Skeleton._imageLoaded.height * this.scale.y);
+	}
+
+	draw() {
+		image(Skeleton._imageLoaded, this.position.x, this.position.y, Skeleton._imageLoaded.width * this.scale.x, Skeleton._imageLoaded.height * this.scale.y);
+	}
+
+	process() {
+		this.position.x -= PlaceableItem.getSpeed(75) * deltaTime;
+	}
+}
+
+class Bone extends CharacterItem {
 
 	static _imageLoaded;
 
@@ -571,6 +597,94 @@ class Bullet extends CharacterItem {
 	}
 }
 
+class Bullet extends CharacterItem {
+
+	static _imageLoaded;
+
+	/**
+	 * @type {Vector2}
+	 */
+	direction
+
+	/**
+	 * @type {number}
+	 */
+	timeLimit
+
+	/**
+	 * @type {number}
+	 */
+	currentTime
+
+	constructor() {
+		super();
+
+		this.direction = new Vector2(0, 0);
+
+		this.collision.mask_layer.set(0, true);
+		this.collision.layer.set(1, true);
+		this.collision.offset.x = -6;
+	}
+
+	/**
+	 * @returns {Bullet}
+	 */
+	static instance() {
+
+		/**
+		 * @type {Bullet}
+		 */
+		let bullet = new Bullet();
+		bullet.scale = new Vector2(3, 3);
+		bullet.collision.size = new Vector2(
+			Bullet._imageLoaded.width * bullet.scale.x,
+			Bullet._imageLoaded.height * bullet.scale.y
+		);
+
+		return bullet;
+	}
+
+	draw() {
+		image(Bullet._imageLoaded, this.position.x, this.position.y, Bullet._imageLoaded.width*this.scale.x, Bullet._imageLoaded.height*this.scale.y);
+	}
+
+	process() {
+
+		let speed = Vector2.getSpeed(new Vector2(600, 0))
+
+		this.position = Vector2.sumVectors(
+			this.position,
+			Vector2.multiplyVectors(speed, this.direction, new Vector2(deltaTime, deltaTime))
+		);
+
+		if (this.position.x > CANVAS_SIZE.x || this.position.x < 0) {
+			this.free();
+		}
+		else if (this.position.y > CANVAS_SIZE.y || this.position.y < 0) {
+			this.free();
+		}
+
+		//console.log(this.position);
+
+		//console.log("Processed bullet");
+	}
+
+	/**
+	 * 
+	 * @param {Collision} coll
+	 */
+	onCollide(coll) {
+
+		if (coll.actor instanceof Monster) {
+			coll.actor.free();
+
+			this.free();
+			console.log("Detected collision")
+		}
+
+	}
+}
+
 class Player extends CharacterItem {
 
 	static _imageLoaded;
@@ -640,6 +754,7 @@ async function setup() {
 
 	Bullet._imageLoaded = await loadImage("./assets/bullet.png");
 	Ghost._imageLoaded = await loadImage("./assets/ghost.png");
+	Skeleton._imageLoaded = await loadImage("./assets/skeleton.png");
 
 	player.scale.x = 3;
 	player.scale.y = 3;
@@ -648,6 +763,7 @@ async function setup() {
 
 
 	EntitiesSpawner.addEntity(Ghost);
+	EntitiesSpawner.addEntity(Skeleton);
 }
 
 function draw() {
