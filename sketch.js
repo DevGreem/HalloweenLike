@@ -391,7 +391,26 @@ class Collision extends CanvasItem {
 	 * @returns {bool}
 	 */
 	isInto(other) {
-		return this.vecIsInto(other.getRealPos());
+		let pos = this.getRealPos();
+		let otherPos = other.getRealPos();
+
+		if (pos.x + this.size.x < otherPos.x) {
+			return false;
+		}
+
+		if (pos.x > otherPos.x + other.size.x) {
+			return false;
+		}
+
+		if (pos.y + this.size.y < otherPos.y) {
+			return false;
+		}
+
+		if (pos.y > otherPos.y + other.size.y) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
