@@ -139,14 +139,16 @@ class EntitiesSpawner {
 	/**
 	 * @type {number}
 	 */
-	static spawnTime = 20;
+	static spawnTime = 3;
 
 	/**
 	 * @type {number}
 	 */
-	static _leftTime = 20;
+	static _leftTime = 3;
 
 	static _spawnArea = new Vector2(CANVAS_SIZE.x, CANVAS_SIZE.x + 50);
+
+	static entitiesCap = 10;
 
 	/**
 	 * 
@@ -159,6 +161,11 @@ class EntitiesSpawner {
 	}
 
 	static process() {
+
+		if (this._entities.length >= this.entitiesCap) {
+			return;
+		}
+
 		EntitiesSpawner._leftTime -= deltaTime/1000;
 
 		if (EntitiesSpawner._leftTime <= 0) {
@@ -431,26 +438,12 @@ class CharacterItem extends PlaceableItem {
 
 }
 
-class Ghost extends CharacterItem {
+class Monster extends CharacterItem {
 
 	constructor() {
 		super();
 		this.collision.layer.set(0, true)
 		this.collision.mask_layer.set(2, true);
-
-		this.collision.size = new Vector2(100, 100);
-		this.collision.offset = new Vector2(-50, -50);
-	}
-	
-	draw() {
-		fill(255, 0, 0);
-		//console.log("Drawed ghost");
-		ellipse(this.position.x, this.position.y, 100, 100);
-	}
-
-	process() {
-		// this.position.x += random(-3, 3)*deltaTime;
-		// this.position.y += random(-3, 3)*deltaTime;
 	}
 
 	/**
@@ -466,6 +459,29 @@ class Ghost extends CharacterItem {
 			coll.actor.free();
 		}
 	}
+}
+
+class Ghost extends Monster {
+
+	static _imageLoaded
+
+	constructor() {
+		super();
+		this.collision.offset = new Vector2(0, 0);
+		this.scale = new Vector2(3, 3);
+		this.collision.size = new Vector2(Ghost._imageLoaded.width * this.scale.x, Ghost._imageLoaded.height * this.scale.y);
+	}
+	
+	draw() {
+		//console.log("Drawed ghost");
+		image(Ghost._imageLoaded, this.position.x, this.position.y, Ghost._imageLoaded.width * this.scale.x, Ghost._imageLoaded.height * this.scale.y);
+	}
+
+	process() {
+		this.position.x -= PlaceableItem.getSpeed(75) * deltaTime;
+	}
+
+	
 }
 
 class Bullet extends CharacterItem {
@@ -623,6 +639,7 @@ async function setup() {
 	noSmooth();
 
 	Bullet._imageLoaded = await loadImage("./assets/bullet.png");
+	Ghost._imageLoaded = await loadImage("./assets/ghost.png");
 
 	player.scale.x = 3;
 	player.scale.y = 3;
