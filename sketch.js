@@ -622,10 +622,16 @@ class Witch extends Monster {
 	 */
 	hits
 
+	changePositionTime = 1
+	currentChangePositionTime = 1;
+	multiplicator = 0;
+
 	constructor() {
 		super();
 
-		hits = 3;
+		this.currentChangePositionTime = this.changePositionTime
+		this.hits = 2;
+		this.multiplicator = 0;
 		this.collision.size = new Vector2(
 			Witch._imageLoaded.width * this.scale.x,
 			Witch._imageLoaded.height * this.scale.y,
@@ -638,13 +644,34 @@ class Witch extends Monster {
 
 	process() {
 
-		this.position.x -= PlaceableItem.getSpeed(300) * deltaTime;
+		this.position.x += PlaceableItem.getSpeed(-75) * deltaTime;
+		this.currentChangePositionTime -= deltaTime/1000;
+
+		if (this.currentChangePositionTime <= 0) {
+
+			const res = random(0, 1);
+
+			if (res >= 0.5) {
+				
+				if (this.multiplicator === 0) {
+					this.multiplicator = random([-1, 1])
+				}
+
+				this.position.y += PlaceableItem.getSpeed(this.multiplicator*100) * deltaTime;
+				this.position.y = constrain(this.position.y, 0, CANVAS_SIZE.y - Witch._imageLoaded.height*this.scale.y)
+			}
+
+			if (this.currentChangePositionTime <= -1) {
+				this.currentChangePositionTime = this.changePositionTime;
+				this.multiplicator = 0;
+			}
+		}
 	}
 
 	free() {
 
-		if (hits > 0) {
-			hits -= 1;
+		if (this.hits > 0) {
+			this.hits -= 1;
 			return;
 		}
 
@@ -811,6 +838,7 @@ async function setup() {
 	Ghost._imageLoaded = await loadImage("./assets/ghost.png");
 	Bone._imageLoaded = await loadImage("./assets/bone.png");
 	Skeleton._imageLoaded = await loadImage("./assets/skeleton.png");
+	Witch._imageLoaded = await loadImage("./assets/witch.png")
 
 	player.scale.x = 3;
 	player.scale.y = 3;
@@ -820,6 +848,7 @@ async function setup() {
 
 	EntitiesSpawner.addEntity(Ghost);
 	EntitiesSpawner.addEntity(Skeleton);
+	EntitiesSpawner.addEntity(Witch);
 }
 
 function draw() {
