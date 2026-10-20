@@ -613,6 +613,45 @@ class Bone extends Monster {
 	}
 }
 
+class Witch extends Monster {
+
+	static _imageLoaded;
+
+	/**
+	 * @type {number}
+	 */
+	hits
+
+	constructor() {
+		super();
+
+		hits = 3;
+		this.collision.size = new Vector2(
+			Witch._imageLoaded.width * this.scale.x,
+			Witch._imageLoaded.height * this.scale.y,
+		)
+	}
+
+	draw() {
+		image(Witch._imageLoaded, this.position.x, this.position.y, Witch._imageLoaded.width * this.scale.x, Witch._imageLoaded.height * this.scale.y);
+	}
+
+	process() {
+
+		this.position.x -= PlaceableItem.getSpeed(300) * deltaTime;
+	}
+
+	free() {
+
+		if (hits > 0) {
+			hits -= 1;
+			return;
+		}
+
+		super.free();
+	}	
+}
+
 class Bullet extends CharacterItem {
 
 	static _imageLoaded;
