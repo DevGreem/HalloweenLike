@@ -326,9 +326,12 @@ class Collision extends CanvasItem {
 	 * @returns {Vector2}
 	 */
 	getRealPos() {
+
+		const p = this.actor?.position ?? this.position;
+
 		return new Vector2(
-			this.position.x+this.offset.x,
-			this.position.y+this.offset.y
+			p.x+this.offset.x,
+			p.y+this.offset.y
 		)
 	}
 	
@@ -1036,6 +1039,7 @@ class StartState extends GameState {
 
 	exit() {
 		ITEM_REGISTRY.clear();
+		COLLISION_REGISTRY.clear();
 
 		state = new PlayingState();
 		state.start();
@@ -1075,6 +1079,7 @@ class DiedState extends GameState {
 
 	exit() {
 		ITEM_REGISTRY.clear();
+		COLLISION_REGISTRY.clear();
 
 		state = new StartState();
 		state.start();
@@ -1094,7 +1099,35 @@ class DiedState extends GameState {
 	}
 }
 
+class EndZone extends PlaceableItem {
+
+	/**
+	 * @type {Collision}
+	 */
+	collision
+
+	constructor() {
+
+		super();
+		this.position = new Vector2(-5, 0);
+
+		this.collision = new Collision(this);
+		this.collision.size = new Vector2(10, CANVAS_SIZE.y);
+		this.collision.mask_layer.set(0, true)
+	}
+}
+
 class PlayingState extends GameState {
+
+	/**
+	 * @type {EndZone}
+	 */
+	_endZone
+
+	/**
+	 * @type {Collision}
+	 */
+	endCollision
 
 	/**
 	 * @type {Player}
@@ -1108,9 +1141,13 @@ class PlayingState extends GameState {
 	dispersion = 0.0005;
 
 	start() {
+
+		this._endZone = new EndZone();
+		this._endZone.collision.listeners.push(this.onCollisioned.bind(this));
+
 		this.player = new Player();
 		this.player.position.x = 10;
-		this.player.dieListeners.push(this.onDiePlayer.bind(this));
+		this.player.dieListeners.push(this.exit.bind(this));
 
 		EntitiesSpawner.addEntity(Ghost);
 		EntitiesSpawner.addEntity(Skeleton);
@@ -1133,12 +1170,17 @@ class PlayingState extends GameState {
 		EntitiesSpawner.removeEntity(Skeleton);
 		EntitiesSpawner.removeEntity(Witch);
 		ITEM_REGISTRY.clear();
+		COLLISION_REGISTRY.clear();
 
 		state = new DiedState();
 		state.start();
 	}
 
-	onDiePlayer() {
+	/**
+	 * 
+	 * @param {Collision} coll 
+	 */
+	onCollisioned(coll) {
 		this.exit();
 	}
 
