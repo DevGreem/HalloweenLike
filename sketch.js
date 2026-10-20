@@ -851,6 +851,12 @@ class Player extends CharacterItem {
 }
 const player = new Player();
 
+/**
+ * @type {number[][]}
+ */
+const backgroundPoints = [];
+const dispersion = 0.0025;
+
 async function setup() {
 	createCanvas(CANVAS_SIZE.x, CANVAS_SIZE.y);
 	frameRate(60);
@@ -871,11 +877,23 @@ async function setup() {
 	EntitiesSpawner.addEntity(Ghost);
 	EntitiesSpawner.addEntity(Skeleton);
 	EntitiesSpawner.addEntity(Witch);
+
+	for (let y = 1; y < CANVAS_SIZE.y; y++) {
+		for (let x = 1; x < CANVAS_SIZE.x; x++) {
+			const res = random(0, 1);
+
+			if (res < dispersion) {
+				backgroundPoints.push([x, y, random(100, 255)]);
+			} 
+		}
+	}
 }
 
 function draw() {
-	background(220);
-	
+	background(50);
+
+	drawPoints();
+
 	ITEM_REGISTRY.canvas.forEach((reg) => {
 		reg.draw();
 		reg.process();
@@ -884,6 +902,14 @@ function draw() {
 	EntitiesSpawner.process();
 
 	//console.log("Collisions: ", COLLISION_REGISTRY);
+}
+
+async function drawPoints() {
+	backgroundPoints.forEach((val) => {
+
+		stroke(255, 255, 255, val[2]);
+		point(val[0], val[1], 0);
+	})
 }
 
 function keyPressed() {
