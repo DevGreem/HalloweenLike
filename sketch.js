@@ -130,7 +130,7 @@ class CanvasRegister {
 
 	clear() {
 		this.canvas.forEach((val, id) => {
-			val.free();
+			val.forceFree();
 		})
 	}
 }
@@ -193,7 +193,7 @@ class EntitiesSpawner {
 	 * @param {typeof CharacterItem} entityType 
 	 */
 	static removeEntity(entityType) {
-		EntitiesSpawner._entities = EntitiesSpawner.filter(entity => entity !== entityType);
+		EntitiesSpawner._entities = EntitiesSpawner._entities.filter(entity => entity !== entityType);
 	}
 
 	static spawnEntity() {
@@ -247,6 +247,10 @@ class CanvasItem {
 	process() {}
 
 	free() {
+		ITEM_REGISTRY.unregister(this.id);
+	}
+
+	forceFree() {
 		ITEM_REGISTRY.unregister(this.id);
 	}
 }
@@ -832,9 +836,18 @@ class Player extends CharacterItem {
 	bulletCooldown = 0.25;
 	currentBulletCooldown = 0.5;
 
+	/**
+	 * @type {CallableFunction[]}
+	 */
+	dieListeners = []
+
+	_died = false;
+
 	constructor() {
 		super();
 		this.bulletCooldown = 0.25;
+
+		this.scale = new Vector2(3, 3);
 		this.currentBulletCooldown = this.bulletCooldown;
 		this.collision.layer.set(2, true);
 
@@ -901,6 +914,17 @@ class Player extends CharacterItem {
 	 */
 	onCollide(coll) {
 		this.free();
+	}
+
+	free() {
+
+		if (this._died) {
+			return;
+		}
+
+		this._died = true;
+		this.dieListeners.forEach(func => func());
+		super.free();
 	}
 }
 
@@ -1002,8 +1026,8 @@ class StartState extends GameState {
 		this.startButton = new Button();
 		this.startButton.text = "Start";
 		this.startButton.color = [255, 50, 100, 255];
-		this.startButton.position = new Vector2(150, 200);
 		this.startButton.setSize(new Vector2(80, 16))
+		this.startButton.position = new Vector2((CANVAS_SIZE.x - this.startButton.size.x)/2, (CANVAS_SIZE.y - this.startButton.size.y)/2);
 
 		this.startButton.pressedListeners.push(this.exit);
 
@@ -1031,6 +1055,43 @@ class StartState extends GameState {
 
 class DiedState extends GameState {
 
+	/**
+	 * @type {Button}
+	 */
+	returnButton
+
+	start() {
+
+		fill(255);
+		
+		this.returnButton = new Button();
+		this.returnButton.text = "Try Again!";
+		this.returnButton.color = [255, 50, 100, 255];
+		this.returnButton.setSize(new Vector2(80, 16))
+		this.returnButton.position = new Vector2((CANVAS_SIZE.x - this.returnButton.size.x)/2, (CANVAS_SIZE.y - this.returnButton.size.y)/2);
+		
+		this.returnButton.pressedListeners.push(this.exit.bind(this));
+	}
+
+	exit() {
+		ITEM_REGISTRY.clear();
+
+		state = new StartState();
+		state.start();
+	}
+
+	draw() {
+		background(50);
+
+		ITEM_REGISTRY.canvas.forEach((val) => {
+			val.draw();
+			val.process();
+		})
+
+		fill(255)
+		textSize(8);
+		text("You died!", (this.returnButton.position.x + this.returnButton.size.x/3), this.returnButton.position.y - 40);
+	}
 }
 
 class PlayingState extends GameState {
@@ -1048,9 +1109,8 @@ class PlayingState extends GameState {
 
 	start() {
 		this.player = new Player();
-		this.player.scale.x = 3;
-		this.player.scale.y = 3;
 		this.player.position.x = 10;
+		this.player.dieListeners.push(this.onDiePlayer.bind(this));
 
 		EntitiesSpawner.addEntity(Ghost);
 		EntitiesSpawner.addEntity(Skeleton);
@@ -1069,8 +1129,6 @@ class PlayingState extends GameState {
 
 	exit() {
 
-		player.free();
-		player = null;
 		EntitiesSpawner.removeEntity(Ghost);
 		EntitiesSpawner.removeEntity(Skeleton);
 		EntitiesSpawner.removeEntity(Witch);
@@ -1078,6 +1136,10 @@ class PlayingState extends GameState {
 
 		state = new DiedState();
 		state.start();
+	}
+
+	onDiePlayer() {
+		this.exit();
 	}
 
 	draw() {
@@ -1135,6 +1197,10 @@ function keyPressed() {
 
 	if (key === 'p') {
 		DEBUG_MODE = !DEBUG_MODE;
+	}
+
+	if (key === "t") {
+		state.exit();
 	}
 }
 
