@@ -882,24 +882,21 @@ class Player extends CharacterItem {
 		if (this.currentBulletCooldown > 0) {
 			this.currentBulletCooldown -= deltaTime/1000;
 		}
-	}
 
-	keyPressed() {
+		const speed = PlaceableItem.getSpeed(200);
 
-		let speed = PlaceableItem.getSpeed(500);
-
-		if (key === 'w') {
+		if (keyIsDown(87)) {
 			this.position.y -= speed*deltaTime;
 		}
-
-		if (key === 's') {
+		
+		if (keyIsDown(83)) {
 			this.position.y += speed*deltaTime;
 		}
 		
 		this.position.y = constrain(
 			this.position.y, 0,
-			CANVAS_SIZE.y - Player._imageLoaded.height*this.scale.y
-		)
+			CANVAS_SIZE.y - Player._imageLoaded.height * this.scale.y
+		);
 	}
 
 	/**
@@ -1142,6 +1139,11 @@ class PlayingState extends GameState {
 	player;
 
 	/**
+	 * @type {number}
+	 */
+	timeSurvived = 0
+
+	/**
 	 * @type {number[][]}
 	 */
 	backgroundPoints = [];
@@ -1204,6 +1206,14 @@ class PlayingState extends GameState {
 			reg.draw();
 			reg.process();
 		});
+
+		this.timeSurvived += deltaTime/1000;
+
+		fill(255);
+		textSize(12);
+
+		const textSurvived = "Time Survived: " + floor(this.timeSurvived).toString() + " Seconds";
+		text(textSurvived, CANVAS_SIZE.x - 6*textSurvived.length, 12)
 
 		EntitiesSpawner.process();
 	}
