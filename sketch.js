@@ -90,7 +90,7 @@ class Vector2 {
 	}
 }
 
-const CANVAS_SIZE = new Vector2(400, 400);
+const CANVAS_SIZE = new Vector2(500, 400);
 
 class CanvasRegister {
 
@@ -632,6 +632,7 @@ class Witch extends Monster {
 		this.currentChangePositionTime = this.changePositionTime
 		this.hits = 2;
 		this.multiplicator = 0;
+		this.scale = new Vector2(2, 2);
 		this.collision.size = new Vector2(
 			Witch._imageLoaded.width * this.scale.x,
 			Witch._imageLoaded.height * this.scale.y,
@@ -771,9 +772,16 @@ class Player extends CharacterItem {
 
 	static _imageLoaded;
 
+	/**
+	 * @type {number}
+	 */
+	bulletCooldown = 0.25;
+	currentBulletCooldown = 0.5;
+
 	constructor() {
 		super();
-
+		this.bulletCooldown = 0.25;
+		this.currentBulletCooldown = this.bulletCooldown;
 		this.collision.layer.set(2, true);
 	}
 
@@ -788,6 +796,13 @@ class Player extends CharacterItem {
 
 	draw() {
 		image(this._imageLoaded, this.position.x, this.position.y, this._imageLoaded.width*this.scale.x, this._imageLoaded.height*this.scale.y);
+	}
+
+	process() {
+		
+		if (this.currentBulletCooldown > 0) {
+			this.currentBulletCooldown -= deltaTime/1000;
+		}
 	}
 
 	keyPressed() {
@@ -813,10 +828,17 @@ class Player extends CharacterItem {
 	 * @param {MouseEvent} event 
 	 */
 	mouseClicked(event) {
+
+		if (this.currentBulletCooldown > 0) {
+			return
+		}
+
 		let bullet = Bullet.instance();
 		bullet.position.x = this.position.x
 		bullet.position.y += this.position.y + this._imageLoaded.height/2;
 		bullet.direction.x = 1;
+
+		this.currentBulletCooldown = this.bulletCooldown;
 	}
 
 	/**
