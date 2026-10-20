@@ -452,6 +452,11 @@ class Collision extends CanvasItem {
 		super.free();
 		COLLISION_REGISTRY.delete(this.id);
 	}
+
+	forceFree() {
+		COLLISION_REGISTRY.delete(this.id);
+		super.forceFree();
+	}
 }
 
 class PlaceableItem extends CanvasItem {
@@ -506,6 +511,10 @@ class CharacterItem extends PlaceableItem {
 		super.free();
 	}
 
+	forceFree() {
+		this.collision.forceFree();
+		super.forceFree();
+	}
 }
 
 class Monster extends CharacterItem {
@@ -1039,7 +1048,6 @@ class StartState extends GameState {
 
 	exit() {
 		ITEM_REGISTRY.clear();
-		COLLISION_REGISTRY.clear();
 
 		state = new PlayingState();
 		state.start();
@@ -1079,7 +1087,6 @@ class DiedState extends GameState {
 
 	exit() {
 		ITEM_REGISTRY.clear();
-		COLLISION_REGISTRY.clear();
 
 		state = new StartState();
 		state.start();
@@ -1170,7 +1177,6 @@ class PlayingState extends GameState {
 		EntitiesSpawner.removeEntity(Skeleton);
 		EntitiesSpawner.removeEntity(Witch);
 		ITEM_REGISTRY.clear();
-		COLLISION_REGISTRY.clear();
 
 		state = new DiedState();
 		state.start();
@@ -1181,6 +1187,11 @@ class PlayingState extends GameState {
 	 * @param {Collision} coll 
 	 */
 	onCollisioned(coll) {
+
+		if (coll.actor instanceof Bone) {
+			return;
+		}
+
 		this.exit();
 	}
 
@@ -1228,7 +1239,9 @@ function draw() {
 
 function keyPressed() {
 
-	ITEM_REGISTRY.canvas.forEach((reg) => {
+	const actualRegistries = [...ITEM_REGISTRY.canvas.values()];
+
+	actualRegistries.forEach((reg) => {
 
 		if (!('keyPressed' in reg)) {
 			return;
@@ -1252,7 +1265,9 @@ function keyPressed() {
  */
 function mouseClicked(event) {
 
-	ITEM_REGISTRY.canvas.forEach((reg) => {
+	const actualRegistries = [...ITEM_REGISTRY.canvas.values()];
+
+	actualRegistries.forEach((reg) => {
 
 		if (!('mouseClicked' in reg)) {
 			return;
