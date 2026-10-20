@@ -127,6 +127,12 @@ class CanvasRegister {
 	unregister(id) {
 		this.canvas.delete(id);
 	}
+
+	clear() {
+		this.canvas.forEach((val, id) => {
+			val.free();
+		})
+	}
 }
 
 class EntitiesSpawner {
@@ -180,6 +186,14 @@ class EntitiesSpawner {
 	 */
 	static addEntity(entityType) {
 		EntitiesSpawner._entities.push(entityType);
+	}
+
+	/**
+	 * 
+	 * @param {typeof CharacterItem} entityType 
+	 */
+	static removeEntity(entityType) {
+		EntitiesSpawner._entities = EntitiesSpawner.filter(entity => entity !== entityType);
 	}
 
 	static spawnEntity() {
@@ -272,7 +286,12 @@ class Collision extends CanvasItem {
 	/**
 	 * @type {CallableFunction[]}
 	 */
-	listeners
+	listeners = []
+	
+	/**
+	 * @type {CallableFunction[]}
+	 */
+	mouseListeners = []
 
 	/**
 	 * 
@@ -291,6 +310,7 @@ class Collision extends CanvasItem {
 		this.mask_layer = new Map();
 
 		this.listeners = [];
+		this.mouseListeners = [];
 
 		COLLISION_REGISTRY.set(this.id, this)
 		// console.log("Constructed collision with id ", this.id)
@@ -358,29 +378,44 @@ class Collision extends CanvasItem {
 		})
 	}
 
+	mouseClicked() {
+
+		if (this.vecIsInto(new Vector2(mouseX, mouseY))) {
+			this.mouseListeners.forEach((func) => func())
+		}
+	}
+
 	/**
 	 * 
 	 * @param {Collision} other 
 	 * @returns {bool}
 	 */
 	isInto(other) {
+		return this.vecIsInto(other.getRealPos());
+	}
+
+	/**
+	 * 
+	 * @param {Vector2} vector
+	 * @returns {bool} 
+	 */
+	vecIsInto(vector) {
 
 		let pos = this.getRealPos();
-		let otherPos = other.getRealPos();
 
-		if (pos.x + this.size.x < otherPos.x) {
+		if (pos.x + this.size.x < vector.x) {
 			return false;
 		}
 
-		if (pos.x > otherPos.x + other.size.x) {
+		if (pos.x > vector.x) {
 			return false;
 		}
 
-		if (pos.y + this.size.y < otherPos.y) {
+		if (pos.y + this.size.y < vector.y) {
 			return false;
 		}
 
-		if (pos.y > otherPos.y + other.size.y) {
+		if (pos.y > vector.y) {
 			return false;
 		}
 
@@ -783,19 +818,19 @@ class Player extends CharacterItem {
 		this.bulletCooldown = 0.25;
 		this.currentBulletCooldown = this.bulletCooldown;
 		this.collision.layer.set(2, true);
-	}
-
-	async init() {
-		this._imageLoaded = await loadImage("./assets/player.png");
 
 		this.collision.size = new Vector2(
-			16 * 3,
-			12 * 3
+			Player._imageLoaded.width * this.scale.x,
+			Player._imageLoaded.height * this.scale.y
 		);
 	}
 
+	static async init() {
+		Player._imageLoaded = await loadImage("./assets/player.png");
+	}
+
 	draw() {
-		image(this._imageLoaded, this.position.x, this.position.y, this._imageLoaded.width*this.scale.x, this._imageLoaded.height*this.scale.y);
+		image(Player._imageLoaded, this.position.x, this.position.y, Player._imageLoaded.width*this.scale.x, Player._imageLoaded.height*this.scale.y);
 	}
 
 	process() {
@@ -819,7 +854,7 @@ class Player extends CharacterItem {
 		
 		this.position.y = constrain(
 			this.position.y, 0,
-			CANVAS_SIZE.y - this._imageLoaded.height*this.scale.y
+			CANVAS_SIZE.y - Player._imageLoaded.height*this.scale.y
 		)
 	}
 
@@ -835,7 +870,7 @@ class Player extends CharacterItem {
 
 		let bullet = Bullet.instance();
 		bullet.position.x = this.position.x
-		bullet.position.y += this.position.y + this._imageLoaded.height/2;
+		bullet.position.y += this.position.y + Player._imageLoaded.height/2;
 		bullet.direction.x = 1;
 
 		this.currentBulletCooldown = this.bulletCooldown;
@@ -849,67 +884,223 @@ class Player extends CharacterItem {
 		this.free();
 	}
 }
-const player = new Player();
+
+class Button extends CharacterItem {
+
+	/**
+	 * @type {string}
+	 */
+	text
+
+	/**
+	 * @type {number}
+	 */
+	textSize = 8
+
+	/**
+	 * @type {Vector2}
+	 */
+	size
+
+	/**
+	 * @type {number[]}
+	 */
+	color;
+
+	/**
+	 * @type {CallableFunction[]}
+	 */
+	pressedListeners = []
+
+	constructor() {
+		super();
+		this.setSize(new Vector2(16, 8));
+
+		this.pressedListeners = [];
+		this.collision.mouseListeners.push(this.onPressed.bind(this));
+	}
+
+	/**
+	 * 
+	 * @param {Vector2} vector 
+	 */
+	setSize(vector) {
+		this.size = vector;
+		this.collision.size = this.size;
+	}
+
+	draw() {
+		fill(this.color[0], this.color[1], this.color[2], this.color[3]);
+		rect(this.position.x, this.position.y, this.size.x, this.size.y);
+
+		fill(255);
+		textSize(this.textSize);
+		text(this.text, this.position.x + this.size.x/2 - this.textSize, this.position.y + this.size.y/2 + this.textSize/2);
+	}
+
+	onPressed() {
+		this.pressedListeners.forEach((func) => func())
+	}
+}
+
+class GameState {
+
+	title
+
+	async setup() {}
+	
+	async start() {}
+
+	async exit() {}
+
+	draw() {}
+
+	keyPressed() {}
+
+	mouseClicked() {}
+}
+
+class StartState extends GameState {
+
+	/**
+	 * @type {Button}
+	 */
+	startButton
+
+	async setup() {
+		Bullet._imageLoaded = await loadImage("./assets/bullet.png");
+		Ghost._imageLoaded = await loadImage("./assets/ghost.png");
+		Bone._imageLoaded = await loadImage("./assets/bone.png");
+		Skeleton._imageLoaded = await loadImage("./assets/skeleton.png");
+		Witch._imageLoaded = await loadImage("./assets/witch.png")
+		await Player.init();
+
+		this.start();
+	}
+
+	start() {
+		
+		this.startButton = new Button();
+		this.startButton.text = "Start";
+		this.startButton.color = [255, 50, 100, 255];
+		this.startButton.position = new Vector2(150, 200);
+		this.startButton.setSize(new Vector2(80, 16))
+
+		this.startButton.pressedListeners.push(this.exit);
+
+		console.log("Invoked start button");
+	}
+
+	exit() {
+		ITEM_REGISTRY.clear();
+
+		state = new PlayingState();
+		state.start();
+
+		console.log("Button Clicked");
+	}
+
+	draw() {
+		background(50);
+
+		ITEM_REGISTRY.canvas.forEach((reg) => {
+			reg.draw();
+			reg.process();
+		});
+	}
+}
+
+class DiedState extends GameState {
+
+}
+
+class PlayingState extends GameState {
+
+	/**
+	 * @type {Player}
+	 */
+	player;
+
+	/**
+	 * @type {number[][]}
+	 */
+	backgroundPoints = [];
+	dispersion = 0.0005;
+
+	start() {
+		this.player = new Player();
+		this.player.scale.x = 3;
+		this.player.scale.y = 3;
+		this.player.position.x = 10;
+
+		EntitiesSpawner.addEntity(Ghost);
+		EntitiesSpawner.addEntity(Skeleton);
+		EntitiesSpawner.addEntity(Witch);
+
+		for (let y = 1; y < CANVAS_SIZE.y; y++) {
+			for (let x = 1; x < CANVAS_SIZE.x; x++) {
+				const res = random(0, 1);
+
+				if (res < this.dispersion) {
+					this.backgroundPoints.push([x, y, random(100, 255)]);
+				} 
+			}
+		}
+	}
+
+	exit() {
+
+		player.free();
+		player = null;
+		EntitiesSpawner.removeEntity(Ghost);
+		EntitiesSpawner.removeEntity(Skeleton);
+		EntitiesSpawner.removeEntity(Witch);
+		ITEM_REGISTRY.clear();
+
+		state = new DiedState();
+		state.start();
+	}
+
+	draw() {
+		background(50);
+
+		this.drawPoints();
+
+		ITEM_REGISTRY.canvas.forEach((reg) => {
+			reg.draw();
+			reg.process();
+		});
+
+		EntitiesSpawner.process();
+	}
+
+	async drawPoints() {
+		this.backgroundPoints.forEach((val) => {
+
+			stroke(255, 255, 255, val[2]);
+			point(val[0], val[1], 0);
+		})
+	}
+}
 
 /**
- * @type {number[][]}
+ * @type {GameState}
  */
-const backgroundPoints = [];
-const dispersion = 0.0025;
+let state = new StartState();
 
 async function setup() {
 	createCanvas(CANVAS_SIZE.x, CANVAS_SIZE.y);
 	frameRate(60);
 	noSmooth();
 
-	Bullet._imageLoaded = await loadImage("./assets/bullet.png");
-	Ghost._imageLoaded = await loadImage("./assets/ghost.png");
-	Bone._imageLoaded = await loadImage("./assets/bone.png");
-	Skeleton._imageLoaded = await loadImage("./assets/skeleton.png");
-	Witch._imageLoaded = await loadImage("./assets/witch.png")
-
-	player.scale.x = 3;
-	player.scale.y = 3;
-	player.position.x = 10;
-	await player.init();
-
-
-	EntitiesSpawner.addEntity(Ghost);
-	EntitiesSpawner.addEntity(Skeleton);
-	EntitiesSpawner.addEntity(Witch);
-
-	for (let y = 1; y < CANVAS_SIZE.y; y++) {
-		for (let x = 1; x < CANVAS_SIZE.x; x++) {
-			const res = random(0, 1);
-
-			if (res < dispersion) {
-				backgroundPoints.push([x, y, random(100, 255)]);
-			} 
-		}
-	}
+	await state.setup();
 }
 
 function draw() {
-	background(50);
-
-	drawPoints();
-
-	ITEM_REGISTRY.canvas.forEach((reg) => {
-		reg.draw();
-		reg.process();
-	});
-
-	EntitiesSpawner.process();
+	
+	state.draw();
 
 	//console.log("Collisions: ", COLLISION_REGISTRY);
-}
-
-async function drawPoints() {
-	backgroundPoints.forEach((val) => {
-
-		stroke(255, 255, 255, val[2]);
-		point(val[0], val[1], 0);
-	})
 }
 
 function keyPressed() {
