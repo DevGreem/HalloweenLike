@@ -494,8 +494,20 @@ class Skeleton extends Monster {
 
 	static _imageLoaded
 
+	/**
+	 * @type {number}
+	 */
+	throwTime = 1;
+
+	currentThrowTime = 1;
+
+	currentAwaitTime
+
 	constructor() {
 		super();
+
+		this.currentThrowTime = this.throwTime;
+		this.currentAwaitTime = 0;
 
 		this.scale = new Vector2(2, 2);
 		this.collision.size = new Vector2(Skeleton._imageLoaded.width * this.scale.x, Skeleton._imageLoaded.height * this.scale.y);
@@ -506,11 +518,33 @@ class Skeleton extends Monster {
 	}
 
 	process() {
-		this.position.x -= PlaceableItem.getSpeed(75) * deltaTime;
+
+		if (this.currentAwaitTime > 0) {
+			this.currentAwaitTime -= deltaTime/1000;
+			return;
+		}
+
+		this.currentThrowTime -= deltaTime/1000;
+
+		if (this.currentThrowTime <= 0.0) {
+			const res = random(0, 1);
+
+			if (res >= 0.5) {
+				const bone = Bone.instance();
+				bone.position.x = this.position.x;
+				bone.position.y = this.position.y + Skeleton._imageLoaded.height/2;
+				this.currentAwaitTime = 0.5;
+			}
+
+			this.currentThrowTime = this.throwTime;
+		}
+		else {
+			this.position.x -= PlaceableItem.getSpeed(75) * deltaTime;
+		}
 	}
 }
 
-class Bone extends CharacterItem {
+class Bone extends Monster {
 
 	static _imageLoaded;
 
@@ -532,38 +566,34 @@ class Bone extends CharacterItem {
 	constructor() {
 		super();
 
-		this.direction = new Vector2(0, 0);
-
-		this.collision.mask_layer.set(0, true);
-		this.collision.layer.set(1, true);
-		this.collision.offset.x = -6;
+		this.direction = new Vector2(1, 0);
 	}
 
 	/**
-	 * @returns {Bullet}
+	 * @returns {Bone}
 	 */
 	static instance() {
 
 		/**
-		 * @type {Bullet}
+		 * @type {Bone}
 		 */
-		let bullet = new Bullet();
-		bullet.scale = new Vector2(3, 3);
+		let bullet = new Bone();
+		bullet.scale = new Vector2(2, 2);
 		bullet.collision.size = new Vector2(
-			Bullet._imageLoaded.width * bullet.scale.x,
-			Bullet._imageLoaded.height * bullet.scale.y
+			Bone._imageLoaded.width * bullet.scale.x,
+			Bone._imageLoaded.height * bullet.scale.y
 		);
 
 		return bullet;
 	}
 
 	draw() {
-		image(Bullet._imageLoaded, this.position.x, this.position.y, Bullet._imageLoaded.width*this.scale.x, Bullet._imageLoaded.height*this.scale.y);
+		image(Bone._imageLoaded, this.position.x, this.position.y, Bone._imageLoaded.width*this.scale.x, Bone._imageLoaded.height*this.scale.y);
 	}
 
 	process() {
 
-		let speed = Vector2.getSpeed(new Vector2(600, 0))
+		let speed = Vector2.getSpeed(new Vector2(-300, 0))
 
 		this.position = Vector2.sumVectors(
 			this.position,
@@ -580,20 +610,6 @@ class Bone extends CharacterItem {
 		//console.log(this.position);
 
 		//console.log("Processed bullet");
-	}
-
-	/**
-	 * 
-	 * @param {Collision} coll
-	 */
-	onCollide(coll) {
-
-		if (coll.actor instanceof Ghost) {
-			coll.actor.free();
-		}
-
-		this.free();
-		console.log("Detected collision")
 	}
 }
 
@@ -754,6 +770,7 @@ async function setup() {
 
 	Bullet._imageLoaded = await loadImage("./assets/bullet.png");
 	Ghost._imageLoaded = await loadImage("./assets/ghost.png");
+	Bone._imageLoaded = await loadImage("./assets/bone.png");
 	Skeleton._imageLoaded = await loadImage("./assets/skeleton.png");
 
 	player.scale.x = 3;
